@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
-import { Play } from 'phosphor-react'
+import { HandPalm, Play } from 'phosphor-react'
 import { differenceInSeconds } from 'date-fns'
 import {
   CountdownContainer,
@@ -10,6 +10,7 @@ import {
   HomeContainer,
   Separator,
   StartCountDownButton,
+  StopCountDownButton,
   TaskInput,
   MinutesAmountInput,
 } from './styles'
@@ -29,6 +30,7 @@ interface Cycle {
   task: string
   minutesAmount: number
   startDate: Date
+  interruptedDate?: Date
 }
 
 export const Home: React.FunctionComponent = () => {
@@ -76,7 +78,21 @@ export const Home: React.FunctionComponent = () => {
     reset()
   }
 
-  console.log('activeCycle', activeCycle)
+  const handleInterruptCycle = () => {
+    setActiveCycleId(null)
+    setCycles(
+      cycles.map((cycle) => {
+        if (cycle.id === activeCycleId) {
+          return {
+            ...cycle,
+            interruptedDate: new Date(),
+          }
+        } else {
+          return cycle
+        }
+      }),
+    )
+  }
 
   const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
   const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
@@ -86,6 +102,12 @@ export const Home: React.FunctionComponent = () => {
 
   const minutes = String(minutesAmount).padStart(2, '0')
   const seconds = String(secondsAmount).padStart(2, '0')
+
+  useEffect(() => {
+    if (activeCycle) {
+      document.title = `${minutes}:${seconds}`
+    }
+  }, [minutes, seconds, activeCycle])
 
   const task = watch('task')
   const isSubmitDisabled = !task
@@ -100,6 +122,7 @@ export const Home: React.FunctionComponent = () => {
             id="task"
             placeholder="Dê um nome para o seu projeto"
             list="task-suggestion"
+            disabled={!!activeCycle}
             {...register('task')}
           />
           <datalist id="task-suggestion">
@@ -114,6 +137,7 @@ export const Home: React.FunctionComponent = () => {
             step={5}
             min={5}
             max={60}
+            disabled={!!activeCycle}
             {...register('minutesAmount', { valueAsNumber: true })}
           />
           <span>minutos .</span>
@@ -126,10 +150,17 @@ export const Home: React.FunctionComponent = () => {
           <span>{seconds[0]}</span>
           <span>{seconds[1]}</span>
         </CountdownContainer>
-        <StartCountDownButton disabled={isSubmitDisabled}>
-          <Play size={24} />
-          Começar
-        </StartCountDownButton>
+        {activeCycle ? (
+          <StopCountDownButton onClick={handleInterruptCycle} type="button">
+            <HandPalm size={24} />
+            Interromper
+          </StopCountDownButton>
+        ) : (
+          <StartCountDownButton disabled={isSubmitDisabled} type="submit">
+            <Play size={24} />
+            Começar
+          </StartCountDownButton>
+        )}
       </form>
     </HomeContainer>
   )
